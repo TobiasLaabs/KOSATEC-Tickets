@@ -154,7 +154,15 @@
     if (status === 'Erledigt') sendMail(EMAILJS_TPL_ERLEDIGT, ticket);
   };
 
+  const DELETE_PIN = '7459';
+
   window._deleteTicket = function(key) {
+    const pin = prompt('🔒 Admin-PIN eingeben:');
+    if (pin === null) return;
+    if (pin !== DELETE_PIN) {
+      alert('❌ Falscher PIN — Löschen nicht möglich.');
+      return;
+    }
     if (!confirm('Ticket wirklich löschen?')) return;
     remove(ref(db, `tickets/${key}`));
   };
