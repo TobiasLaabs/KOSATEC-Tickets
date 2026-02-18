@@ -121,20 +121,44 @@
         actionBtns = `<button class="btn-action" style="background:#f8fafc;color:#64748b;border-color:#e2e8f0" onclick="window._setStatus('${t._key}','Offen')">Wieder öffnen</button>`;
       }
       return `
-      <div class="ticket-card">
+      <div class="ticket-card" id="card-${t._key}">
         <div class="prio-dot" style="background:${pc.dot}"></div>
         <div class="ticket-body">
-          <div class="ticket-top">
+          <div class="ticket-top" onclick="window._toggleExpand('${t._key}')" style="cursor:pointer;user-select:none">
             <span class="ticket-id">${esc(t.id)}</span>
             <span class="ticket-title">${esc(t.titel)}</span>
             <span class="ticket-kategorie">${esc(t.kategorie)}</span>
+            <span id="icon-${t._key}" style="font-size:10px;color:var(--subtle);margin-left:4px">▼</span>
           </div>
-          ${t.beschreibung ? `<div class="ticket-desc">${esc(t.beschreibung)}</div>` : ''}
           <div class="ticket-meta">
             <span class="badge" style="background:${pc.bg};color:${pc.text}">${esc(t.prioritaet)}</span>
             <span class="badge" style="background:${sc.bg};color:${sc.text};border:1px solid ${sc.border}">${esc(t.status)}</span>
             <span style="font-size:11px;color:var(--muted)">👤 ${esc(t.mitarbeiter)}</span>
+            ${t.gemeldet_von ? `<span style="font-size:11px;color:var(--muted)">📢 ${esc(t.gemeldet_von)}</span>` : ''}
+            ${t.angenommen_von ? `<span style="font-size:11px;color:#854d0e">🔧 ${esc(t.angenommen_von)}</span>` : ''}
             <span style="font-size:11px;color:var(--subtle)">🕐 ${timeAgo(t.erstellt)}</span>
+          </div>
+          <div id="expand-${t._key}" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+            ${t.beschreibung ? `
+            <div style="margin-bottom:8px">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">📋 Problembeschreibung</div>
+              <div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap">${esc(t.beschreibung)}</div>
+            </div>` : ''}
+            ${t.gemeldet_von ? `
+            <div style="margin-bottom:8px">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">📢 Gemeldet von</div>
+              <div style="font-size:13px;color:var(--text)">${esc(t.gemeldet_von)}</div>
+            </div>` : ''}
+            ${t.angenommen_von ? `
+            <div style="margin-bottom:8px">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">🔧 Angenommen von</div>
+              <div style="font-size:13px;color:var(--text)">${esc(t.angenommen_von)}</div>
+            </div>` : ''}
+            ${t.loesung ? `
+            <div>
+              <div style="font-size:11px;font-weight:700;color:#166534;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px">✅ Lösung</div>
+              <div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap">${esc(t.loesung)}</div>
+            </div>` : ''}
           </div>
         </div>
         <div class="ticket-actions">
@@ -147,11 +171,48 @@
 
   window._render = render;
 
+  window._toggleExpand = function(key) {
+    const expand = document.getElementById('expand-' + key);
+    const icon = document.getElementById('icon-' + key);
+    if (!expand) return;
+    const isOpen = expand.style.display !== 'none';
+    expand.style.display = isOpen ? 'none' : 'block';
+    if (icon) icon.textContent = isOpen ? '▼' : '▲';
+  };
+
   window._setStatus = function(key, status) {
     const ticket = allTickets.find(t => t._key === key);
     if (!ticket) return;
+    if (status === 'In Bearbeitung') {
+      window._currentAnnehmenKey = key;
+      document.getElementById('annehmen-modal').style.display = 'flex';
+      document.getElementById('a-bearbeiter').value = '';
+      document.getElementById('a-bearbeiter').focus();
+      return;
+    }
+    if (status === 'Erledigt') {
+      window._currentErledigtKey = key;
+      document.getElementById('erledigt-modal').style.display = 'flex';
+      document.getElementById('e-loesung').value = '';
+      document.getElementById('e-loesung').focus();
+      return;
+    }
     update(ref(db, `tickets/${key}`), { status, updated: Date.now() });
-    if (status === 'Erledigt') sendMail(EMAILJS_TPL_ERLEDIGT, ticket);
+  };
+
+  window._confirmAnnehmen = function() {
+    const bearbeiter = document.getElementById('a-bearbeiter').value;
+    if (!bearbeiter || bearbeiter === '– Bitte auswählen –') {
+      alert('Bitte auswählen wer das Ticket annimmt.');
+      return;
+    }
+    const key = window._currentAnnehmenKey;
+    update(ref(db, `tickets/${key}`), {
+      status: 'In Bearbeitung',
+      angenommen_von: bearbeiter,
+      updated: Date.now()
+    });
+    document.getElementById('annehmen-modal').style.display = 'none';
   };
 
   const DELETE_PIN = '7459';
@@ -174,16 +235,21 @@
 
   window._closeModal = function() {
     document.getElementById('modal').style.display = 'none';
+    document.getElementById('annehmen-modal').style.display = 'none';
     document.getElementById('f-titel').value = '';
     document.getElementById('f-beschr').value = '';
+    document.getElementById('f-gemeldet').value = '';
     document.getElementById('f-prioritaet').value = 'Mittel';
     document.getElementById('f-kategorie').value = 'Hardware';
-    document.getElementById('f-mitarbeiter').value = 'Benjamin Behrens';
+    document.getElementById('f-mitarbeiter').value = '';
     document.getElementById('btn-submit').disabled = true;
   };
 
   window._checkSubmit = function() {
-    document.getElementById('btn-submit').disabled = !document.getElementById('f-titel').value.trim();
+    const titel      = document.getElementById('f-titel').value.trim();
+    const gemeldet   = document.getElementById('f-gemeldet').value.trim();
+    const mitarbeiter = document.getElementById('f-mitarbeiter').value;
+    document.getElementById('btn-submit').disabled = !(titel && gemeldet && mitarbeiter);
   };
 
   window._overlayClick = function(e) {
@@ -192,11 +258,19 @@
 
   window._addTicket = function() {
     const titel = document.getElementById('f-titel').value.trim();
-    if (!titel) return;
+    const gemeldet = document.getElementById('f-gemeldet').value.trim();
+    const beschreibung = document.getElementById('f-beschr').value.trim();
+    if (!titel || !gemeldet) return;
+    if (!beschreibung) {
+      alert('Bitte eine Problembeschreibung eingeben.');
+      document.getElementById('f-beschr').focus();
+      return;
+    }
     const ticket = {
       id:           genId(),
       titel,
-      beschreibung: document.getElementById('f-beschr').value.trim(),
+      beschreibung,
+      gemeldet_von: gemeldet,
       prioritaet:   document.getElementById('f-prioritaet').value,
       kategorie:    document.getElementById('f-kategorie').value,
       mitarbeiter:  document.getElementById('f-mitarbeiter').value,
@@ -207,6 +281,24 @@
     push(ticketsRef, ticket);
     sendMail(EMAILJS_TPL_ERSTELLT, ticket);
     window._closeModal();
+  };
+
+  window._confirmErledigt = function() {
+    const loesung = document.getElementById('e-loesung').value.trim();
+    if (!loesung) {
+      alert('Bitte angeben wie das Problem gelöst wurde.');
+      document.getElementById('e-loesung').focus();
+      return;
+    }
+    const key = window._currentErledigtKey;
+    const ticket = allTickets.find(t => t._key === key);
+    update(ref(db, `tickets/${key}`), {
+      status: 'Erledigt',
+      loesung: loesung,
+      updated: Date.now()
+    });
+    if (ticket) sendMail(EMAILJS_TPL_ERLEDIGT, ticket);
+    document.getElementById('erledigt-modal').style.display = 'none';
   };
 
   document.addEventListener('keydown', e => {
@@ -290,6 +382,38 @@
   .btn-submit:hover { background: var(--accent-hover); }
   .btn-submit:disabled { background: #cbd5e1; cursor: not-allowed; }
 
+  .ticket-top { cursor: pointer; user-select: none; }
+  .ticket-top:hover .ticket-title { color: var(--accent); }
+  .expand-icon { transition: transform 0.2s; }
+
+  .ticket-expand {
+    margin-top: 10px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .expand-section {}
+  .expand-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--subtle);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .expand-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+  }
+
   @media (max-width: 640px) {
     .stats-grid { grid-template-columns: repeat(2,1fr); }
     .form-grid { grid-template-columns: 1fr; }
@@ -347,7 +471,6 @@
       <option>Christina Leinweber</option>
       <option>Carsten Nause</option>
       <option>Lars Buchheister</option>
-      <option>– Platzhalter –</option>
     </select>
     <span class="filter-count" id="filter-count"></span>
   </div>
@@ -371,6 +494,10 @@
       <input class="form-input" id="f-titel" placeholder="Kurze Beschreibung des Problems" oninput="window._checkSubmit()">
     </div>
     <div class="form-group">
+      <label class="form-label">Gemeldet von *</label>
+      <input class="form-input" id="f-gemeldet" placeholder="Name des Mitarbeiters der das Problem meldet" oninput="window._checkSubmit()">
+    </div>
+    <div class="form-group">
       <label class="form-label">Beschreibung</label>
       <textarea class="form-textarea" id="f-beschr" placeholder="Details, Fehlermeldung, betroffene Systeme..."></textarea>
     </div>
@@ -390,20 +517,64 @@
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Zuständiger Mitarbeiter</label>
-      <select class="form-select" id="f-mitarbeiter">
+      <label class="form-label">Ersteller *</label>
+      <select class="form-select" id="f-mitarbeiter" onchange="window._checkSubmit()">
+        <option value="">– Bitte auswählen –</option>
         <option>Benjamin Behrens</option>
         <option>Sascha Berg</option>
         <option>Tobias Laabs</option>
         <option>Christina Leinweber</option>
         <option>Carsten Nause</option>
         <option>Lars Buchheister</option>
-        <option>– Platzhalter –</option>
       </select>
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="window._closeModal()">Abbrechen</button>
       <button class="btn-submit" id="btn-submit" onclick="window._addTicket()" disabled>Ticket erstellen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Annehmen Modal -->
+<div class="modal-overlay" id="annehmen-modal" style="display:none">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <span class="modal-title">Ticket annehmen</span>
+      <button class="btn-close" onclick="document.getElementById('annehmen-modal').style.display='none'">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Wer nimmt das Ticket an? *</label>
+      <select class="form-select" id="a-bearbeiter">
+        <option value="">– Bitte auswählen –</option>
+        <option>Benjamin Behrens</option>
+        <option>Sascha Berg</option>
+        <option>Tobias Laabs</option>
+        <option>Christina Leinweber</option>
+        <option>Carsten Nause</option>
+        <option>Lars Buchheister</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="document.getElementById('annehmen-modal').style.display='none'">Abbrechen</button>
+      <button class="btn-submit" onclick="window._confirmAnnehmen()">Annehmen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Erledigt Modal -->
+<div class="modal-overlay" id="erledigt-modal" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <span class="modal-title">✅ Ticket erledigen</span>
+      <button class="btn-close" onclick="document.getElementById('erledigt-modal').style.display='none'">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Wie wurde das Problem gelöst? *</label>
+      <textarea class="form-textarea" id="e-loesung" placeholder="z.B. Treiber neu installiert, Kabel getauscht, Passwort zurückgesetzt..." rows="4"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="document.getElementById('erledigt-modal').style.display='none'">Abbrechen</button>
+      <button class="btn-submit" style="background:#16a34a" onclick="window._confirmErledigt()">✓ Als erledigt markieren</button>
     </div>
   </div>
 </div>
