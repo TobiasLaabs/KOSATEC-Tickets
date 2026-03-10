@@ -33,7 +33,7 @@
   emailjs.init(EMAILJS_PUBLIC_KEY);
 
   function sendMail(templateId, ticket) {
-    emailjs.send(EMAILJS_SERVICE_ID, templateId, {
+    const params = {
       to_email:     ZIEL_EMAIL,
       id:           ticket.id,
       titel:        ticket.titel,
@@ -43,7 +43,17 @@
       kategorie:    ticket.kategorie,
       mitarbeiter:  ticket.mitarbeiter,
       loesung:      ticket.loesung || '–',
-    }).catch(err => console.warn('EmailJS Fehler:', err));
+    };
+    // Send to IT
+    emailjs.send(EMAILJS_SERVICE_ID, templateId, params)
+      .catch(err => console.warn('EmailJS IT Fehler:', err));
+    // Send to melder if email provided
+    if (ticket.melder_email) {
+      emailjs.send(EMAILJS_SERVICE_ID, templateId, {
+        ...params,
+        to_email: ticket.melder_email,
+      }).catch(err => console.warn('EmailJS Melder Fehler:', err));
+    }
   }
   // ─────────────────────────────────────────────────────────
 
@@ -242,9 +252,10 @@
     document.getElementById('f-titel').value = '';
     document.getElementById('f-beschr').value = '';
     document.getElementById('f-gemeldet').value = '';
+    document.getElementById('f-melder-email').value = '';
     document.getElementById('f-prioritaet').value = 'Mittel';
     document.getElementById('f-kategorie').value = 'Hardware';
-    document.getElementById('f-mitarbeiter').value = '';
+    document.getElementById('f-mitarbeiter').value = 'Benjamin Behrens';
     document.getElementById('btn-submit').disabled = true;
   };
 
@@ -269,11 +280,13 @@
       document.getElementById('f-beschr').focus();
       return;
     }
+    const melder_email = document.getElementById('f-melder-email').value.trim();
     const ticket = {
       id:           genId(),
       titel,
       beschreibung,
       gemeldet_von: gemeldet,
+      melder_email: melder_email || '',
       prioritaet:   document.getElementById('f-prioritaet').value,
       kategorie:    document.getElementById('f-kategorie').value,
       mitarbeiter:  document.getElementById('f-mitarbeiter').value,
@@ -310,6 +323,7 @@
     window._currentEditKey = key;
     document.getElementById('edit-titel').value = t.titel || '';
     document.getElementById('edit-gemeldet').value = t.gemeldet_von || '';
+    document.getElementById('edit-melder-email').value = t.melder_email || '';
     document.getElementById('edit-beschr').value = t.beschreibung || '';
     document.getElementById('edit-prioritaet').value = t.prioritaet || 'Mittel';
     document.getElementById('edit-kategorie').value = t.kategorie || 'Hardware';
@@ -329,12 +343,13 @@
     const key = window._currentEditKey;
     update(ref(db, `tickets/${key}`), {
       titel,
-      gemeldet_von: gemeldet,
+      gemeldet_von:  gemeldet,
+      melder_email:  document.getElementById('edit-melder-email').value.trim(),
       beschreibung,
-      prioritaet:  document.getElementById('edit-prioritaet').value,
-      kategorie:   document.getElementById('edit-kategorie').value,
-      mitarbeiter: document.getElementById('edit-mitarbeiter').value,
-      updated:     Date.now(),
+      prioritaet:    document.getElementById('edit-prioritaet').value,
+      kategorie:     document.getElementById('edit-kategorie').value,
+      mitarbeiter:   document.getElementById('edit-mitarbeiter').value,
+      updated:       Date.now(),
     });
     document.getElementById('edit-modal').style.display = 'none';
   };
@@ -631,6 +646,10 @@
     <div class="form-group">
       <label class="form-label">Gemeldet von *</label>
       <input class="form-input" id="edit-gemeldet" placeholder="Name des Melders">
+    </div>
+    <div class="form-group">
+      <label class="form-label">E-Mail des Melders <span style="font-weight:400;color:var(--subtle)">(optional)</span></label>
+      <input class="form-input" id="edit-melder-email" placeholder="z.B. max.mustermann@kosatec.de" type="email">
     </div>
     <div class="form-group">
       <label class="form-label">Problembeschreibung *</label>
