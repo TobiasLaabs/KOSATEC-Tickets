@@ -38,9 +38,11 @@
       id:           ticket.id,
       titel:        ticket.titel,
       beschreibung: ticket.beschreibung || '–',
+      gemeldet_von: ticket.gemeldet_von || '–',
       prioritaet:   ticket.prioritaet,
       kategorie:    ticket.kategorie,
       mitarbeiter:  ticket.mitarbeiter,
+      loesung:      ticket.loesung || '–',
     }).catch(err => console.warn('EmailJS Fehler:', err));
   }
   // ─────────────────────────────────────────────────────────
@@ -163,6 +165,7 @@
         </div>
         <div class="ticket-actions">
           ${actionBtns}
+          <button class="btn-action" style="background:#f1f5f9;color:#475569;border-color:#e2e8f0" onclick="window._editTicket('${t._key}')" title="Bearbeiten">✏️</button>
           <button class="btn-delete" onclick="window._deleteTicket('${t._key}')" title="Löschen">✕</button>
         </div>
       </div>`;
@@ -299,6 +302,41 @@
     });
     if (ticket) sendMail(EMAILJS_TPL_ERLEDIGT, ticket);
     document.getElementById('erledigt-modal').style.display = 'none';
+  };
+
+  window._editTicket = function(key) {
+    const t = allTickets.find(t => t._key === key);
+    if (!t) return;
+    window._currentEditKey = key;
+    document.getElementById('edit-titel').value = t.titel || '';
+    document.getElementById('edit-gemeldet').value = t.gemeldet_von || '';
+    document.getElementById('edit-beschr').value = t.beschreibung || '';
+    document.getElementById('edit-prioritaet').value = t.prioritaet || 'Mittel';
+    document.getElementById('edit-kategorie').value = t.kategorie || 'Hardware';
+    document.getElementById('edit-mitarbeiter').value = t.mitarbeiter || 'Benjamin Behrens';
+    document.getElementById('edit-modal').style.display = 'flex';
+    document.getElementById('edit-titel').focus();
+  };
+
+  window._saveEdit = function() {
+    const titel = document.getElementById('edit-titel').value.trim();
+    const gemeldet = document.getElementById('edit-gemeldet').value.trim();
+    const beschreibung = document.getElementById('edit-beschr').value.trim();
+    if (!titel || !gemeldet || !beschreibung) {
+      alert('Bitte alle Pflichtfelder ausfüllen.');
+      return;
+    }
+    const key = window._currentEditKey;
+    update(ref(db, `tickets/${key}`), {
+      titel,
+      gemeldet_von: gemeldet,
+      beschreibung,
+      prioritaet:  document.getElementById('edit-prioritaet').value,
+      kategorie:   document.getElementById('edit-kategorie').value,
+      mitarbeiter: document.getElementById('edit-mitarbeiter').value,
+      updated:     Date.now(),
+    });
+    document.getElementById('edit-modal').style.display = 'none';
   };
 
   document.addEventListener('keydown', e => {
@@ -575,6 +613,59 @@
     <div class="modal-actions">
       <button class="btn-cancel" onclick="document.getElementById('erledigt-modal').style.display='none'">Abbrechen</button>
       <button class="btn-submit" style="background:#16a34a" onclick="window._confirmErledigt()">✓ Als erledigt markieren</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="edit-modal" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">✏️ Ticket bearbeiten</span>
+      <button class="btn-close" onclick="document.getElementById('edit-modal').style.display='none'">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Titel *</label>
+      <input class="form-input" id="edit-titel" placeholder="Kurze Beschreibung des Problems">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Gemeldet von *</label>
+      <input class="form-input" id="edit-gemeldet" placeholder="Name des Melders">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Problembeschreibung *</label>
+      <textarea class="form-textarea" id="edit-beschr" placeholder="Details, Fehlermeldung, betroffene Systeme..."></textarea>
+    </div>
+    <div class="form-grid">
+      <div>
+        <label class="form-label">Priorität</label>
+        <select class="form-select" id="edit-prioritaet">
+          <option>Mittel</option><option>Hoch</option><option>Niedrig</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Kategorie</label>
+        <select class="form-select" id="edit-kategorie">
+          <option>Hardware</option><option>Software</option><option>Netzwerk</option>
+          <option>Drucker/Peripherie</option><option>Zugang/Berechtigungen</option><option>Sonstiges</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Zuständiger Mitarbeiter</label>
+      <select class="form-select" id="edit-mitarbeiter">
+        <option>Benjamin Behrens</option>
+        <option>Sascha Berg</option>
+        <option>Tobias Laabs</option>
+        <option>Christina Leinweber</option>
+        <option>Carsten Nause</option>
+        <option>Lars Buchheister</option>
+        <option>– Platzhalter –</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="document.getElementById('edit-modal').style.display='none'">Abbrechen</button>
+      <button class="btn-submit" onclick="window._saveEdit()">💾 Speichern</button>
     </div>
   </div>
 </div>
