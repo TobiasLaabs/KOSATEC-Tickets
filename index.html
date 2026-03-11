@@ -255,14 +255,17 @@
     document.getElementById('f-melder-email').value = '';
     document.getElementById('f-prioritaet').value = 'Mittel';
     document.getElementById('f-kategorie').value = 'Hardware';
-    document.getElementById('f-mitarbeiter').selectedIndex = 1;
+    document.getElementById('f-mitarbeiter').value = 'Benjamin Behrens';
     document.getElementById('btn-submit').disabled = true;
   };
 
   window._checkSubmit = function() {
-    const titel    = document.getElementById('f-titel').value.trim();
-    const gemeldet = document.getElementById('f-gemeldet').value.trim();
-    document.getElementById('btn-submit').disabled = !(titel && gemeldet);
+    const titelEl   = document.getElementById('f-titel');
+    const gemeldetEl = document.getElementById('f-gemeldet');
+    const btn = document.getElementById('btn-submit');
+    if (!titelEl || !gemeldetEl || !btn) return;
+    const ok = titelEl.value.trim().length > 0 && gemeldetEl.value.trim().length > 0;
+    btn.disabled = !ok;
   };
 
   window._overlayClick = function(e) {
