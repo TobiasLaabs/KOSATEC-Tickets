@@ -670,6 +670,7 @@
   <!-- Dashboard View -->
   <div id="dashboard-view" style="display:none">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div style="background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:18px">
         <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.4px">Status</div>
         <div style="position:relative;height:200px"><canvas id="ds-status-chart"></canvas></div>
         <div id="ds-status-legend" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:12px;color:#64748b"></div>
@@ -680,17 +681,17 @@
         <div id="ds-kat-legend" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:12px;color:#64748b"></div>
       </div>
     </div>
-
-    <div style="background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:18px;margin-bottom:16px">
-      <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.4px">Angenommen von</div>
-      <div id="ds-ma-legend" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;font-size:12px;color:#64748b"></div>
-      <div style="position:relative;height:240px"><canvas id="ds-ma-chart"></canvas></div>
-    </div>
-
-    <div style="background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:18px">
-      <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.4px">Priorität</div>
-      <div id="ds-prio-legend" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;font-size:12px;color:#64748b"></div>
-      <div style="position:relative;height:180px"><canvas id="ds-prio-chart"></canvas></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:18px">
+        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.4px">Angenommen von</div>
+        <div id="ds-ma-legend" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;font-size:12px;color:#64748b"></div>
+        <div style="position:relative;height:220px"><canvas id="ds-ma-chart"></canvas></div>
+      </div>
+      <div style="background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:18px">
+        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.4px">Priorität</div>
+        <div id="ds-prio-legend" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;font-size:12px;color:#64748b"></div>
+        <div style="position:relative;height:220px"><canvas id="ds-prio-chart"></canvas></div>
+      </div>
     </div>
   </div>
 </main>
